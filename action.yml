@@ -1,0 +1,60 @@
+name: PatchPilot
+description: Repair failed TypeScript CI with bounded patches, isolated checks, and human-reviewed PRs
+author: PatchPilot
+branding:
+  icon: git-pull-request
+  color: green
+inputs:
+  github-token:
+    description: GitHub token with actions read and contents, issues, pull-requests write
+    required: true
+  openai-api-key:
+    description: OpenAI API key with access to the selected structured-output model
+    required: true
+  run-id:
+    description: Failed run ID; defaults to the workflow_run event
+    required: false
+    default: ""
+  workflow-names:
+    description: Comma-separated allowlisted CI workflow names
+    default: CI
+  allowed-paths:
+    description: Comma-separated relative source directories ending in slash
+    default: src/
+  max-attempts:
+    description: Maximum repair attempts (1 to 3)
+    default: "3"
+  model:
+    description: OpenAI model supporting strict JSON schema output
+    default: gpt-4.1-mini
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "22"
+    - name: Install trusted bot dependencies
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: npm ci --ignore-scripts --no-audit --no-fund
+    - name: Build trusted bot
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: npm run build
+    - name: Diagnose and repair
+      shell: bash
+      env:
+        PATCHPILOT_ACTION_PATH: ${{ github.action_path }}
+        PATCHPILOT_RUN_ID: ${{ inputs.run-id }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        OPENAI_API_KEY: ${{ inputs.openai-api-key }}
+        PATCHPILOT_WORKFLOWS: ${{ inputs.workflow-names }}
+        PATCHPILOT_ALLOWED_PATHS: ${{ inputs.allowed-paths }}
+        PATCHPILOT_MAX_ATTEMPTS: ${{ inputs.max-attempts }}
+        PATCHPILOT_MODEL: ${{ inputs.model }}
+      run: |
+        args=()
+        if [[ -n "$PATCHPILOT_RUN_ID" ]]; then
+          args+=("$PATCHPILOT_RUN_ID")
+        fi
+        node "$PATCHPILOT_ACTION_PATH/dist/cli.js" heal "${args[@]}"

@@ -1,0 +1,125 @@
+[
+  {
+    "id": "type-error",
+    "description": "A numeric identity function returns a string",
+    "source": "export function solve(value: number): number {\n  return String(value);\n}\n",
+    "old": "return String(value);",
+    "new": "return value;",
+    "tests": ["assert.equal(solve(3), 3);", "assert.equal(solve(0), 0);"]
+  },
+  {
+    "id": "null-access",
+    "description": "A profile display name crashes when the profile is null",
+    "source": "export function solve(profile: { name: string } | null): string {\n  return profile.name;\n}\n",
+    "old": "return profile.name;",
+    "new": "return profile?.name ?? 'Guest';",
+    "tests": [
+      "assert.equal(solve(null), 'Guest');",
+      "assert.equal(solve({ name: 'Ada' }), 'Ada');"
+    ]
+  },
+  {
+    "id": "wrong-import",
+    "description": "A helper import points to a nonexistent module",
+    "source": "import { twice } from './missing.js';\nexport function solve(value: number): number {\n  return twice(value);\n}\n",
+    "old": "'./missing.js'",
+    "new": "'./helpers.js'",
+    "tests": ["assert.equal(solve(4), 8);", "assert.equal(solve(-2), -4);"]
+  },
+  {
+    "id": "off-by-one",
+    "description": "Last-item lookup indexes one element past the end",
+    "source": "export function solve(values: number[]): number | undefined {\n  return values[values.length];\n}\n",
+    "old": "values[values.length]",
+    "new": "values[values.length - 1]",
+    "tests": [
+      "assert.equal(solve([3, 5, 8]), 8);",
+      "assert.equal(solve([]), undefined);"
+    ]
+  },
+  {
+    "id": "numeric-sort",
+    "description": "Numbers sort lexicographically rather than numerically",
+    "source": "export function solve(values: number[]): number[] {\n  return [...values].sort();\n}\n",
+    "old": "[...values].sort()",
+    "new": "[...values].sort((left, right) => left - right)",
+    "tests": [
+      "assert.deepEqual(solve([10, 2, 1]), [1, 2, 10]);",
+      "assert.deepEqual(solve([-1, -10, 2]), [-10, -1, 2]);"
+    ]
+  },
+  {
+    "id": "zero-default",
+    "description": "A default value incorrectly replaces a valid zero",
+    "source": "export function solve(value: number | undefined): number {\n  return value || 10;\n}\n",
+    "old": "value || 10",
+    "new": "value ?? 10",
+    "tests": [
+      "assert.equal(solve(0), 0);",
+      "assert.equal(solve(undefined), 10);",
+      "assert.equal(solve(4), 4);"
+    ]
+  },
+  {
+    "id": "currency-rounding",
+    "description": "Conversion to cents truncates rather than rounding",
+    "source": "export function solve(price: number): number {\n  return Math.floor(price * 100);\n}\n",
+    "old": "Math.floor(price * 100)",
+    "new": "Math.round(price * 100)",
+    "tests": [
+      "assert.equal(solve(1.239), 124);",
+      "assert.equal(solve(2), 200);"
+    ]
+  },
+  {
+    "id": "missing-return",
+    "description": "A map callback forgets to return the transformed value",
+    "source": "export function solve(values: number[]): number[] {\n  return values.map(value => { value * 2; });\n}\n",
+    "old": "values.map(value => { value * 2; })",
+    "new": "values.map(value => value * 2)",
+    "tests": [
+      "assert.deepEqual(solve([1, 2, 3]), [2, 4, 6]);",
+      "assert.deepEqual(solve([]), []);"
+    ]
+  },
+  {
+    "id": "inverted-filter",
+    "description": "A nonnegative-number filter uses the opposite predicate",
+    "source": "export function solve(values: number[]): number[] {\n  return values.filter(value => value < 0);\n}\n",
+    "old": "value < 0",
+    "new": "value >= 0",
+    "tests": [
+      "assert.deepEqual(solve([-2, 0, 3]), [0, 3]);",
+      "assert.deepEqual(solve([-1]), []);"
+    ]
+  },
+  {
+    "id": "missing-await",
+    "description": "Arithmetic is attempted on a Promise rather than its result",
+    "source": "export async function solve(): Promise<number> {\n  const value = Promise.resolve(7);\n  return value + 1;\n}\n",
+    "old": "const value = Promise.resolve(7);",
+    "new": "const value = await Promise.resolve(7);",
+    "tests": ["assert.equal(await solve(), 8);"]
+  },
+  {
+    "id": "optional-array",
+    "description": "A sum reducer does not handle an absent collection",
+    "source": "export function solve(values: number[] | undefined): number {\n  return values.reduce((total, value) => total + value, 0);\n}\n",
+    "old": "values.reduce",
+    "new": "(values ?? []).reduce",
+    "tests": [
+      "assert.equal(solve(undefined), 0);",
+      "assert.equal(solve([1, 2, 3]), 6);"
+    ]
+  },
+  {
+    "id": "mutation-sort",
+    "description": "A sorting helper unexpectedly mutates caller-owned input",
+    "source": "export function solve(values: number[]): number[] {\n  return values.sort((left, right) => left - right);\n}\n",
+    "old": "values.sort",
+    "new": "[...values].sort",
+    "tests": [
+      "const input = [3, 1, 2]; assert.deepEqual(solve(input), [1, 2, 3]); assert.deepEqual(input, [3, 1, 2]);"
+    ]
+  }
+]

@@ -1,0 +1,32 @@
+name: PatchPilot Repair
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+permissions: {}
+concurrency:
+  group: patchpilot-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+jobs:
+  repair:
+    if: >-
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      !startsWith(github.event.workflow_run.head_branch, 'patchpilot/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      actions: read
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Repair the failed commit
+        uses: YOUR_OWNER/patchpilot@REPLACE_WITH_FULL_COMMIT_SHA
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          workflow-names: CI
+          allowed-paths: src/
+          max-attempts: "3"
